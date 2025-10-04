@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"log"
 	"os"
 	"os/signal"
@@ -12,7 +11,6 @@ import (
 	"github.com/your-username/coffee-cups-system/internal/logger"
 	"github.com/your-username/coffee-cups-system/internal/server"
 	"github.com/your-username/coffee-cups-system/internal/services"
-	"github.com/your-username/coffee-cups-system/internal/telegram"
 )
 
 func main() {
@@ -34,33 +32,8 @@ func main() {
 	// Initialize services
 	services := services.NewServices(db.DB, logger)
 
-	// Initialize Telegram bot (optional - skip if token is invalid)
-	var bot *telegram.Bot
-	if cfg.Telegram.Token != "" && cfg.Telegram.Token != "test_token_12345" {
-		bot, err = telegram.New(cfg.Telegram, services, logger)
-		if err != nil {
-			logger.Warn("Failed to initialize Telegram bot, continuing without bot", "error", err)
-			bot = nil
-		}
-	} else {
-		logger.Info("No valid Telegram bot token provided, running without bot")
-	}
-
-	// Initialize HTTP server
+	// Initialize HTTP server (without Telegram bot)
 	httpServer := server.New(cfg.Server, services, logger)
-
-	// Start services
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// Start Telegram bot (if available)
-	if bot != nil {
-		go func() {
-			if err := bot.Start(ctx); err != nil {
-				logger.Error("Telegram bot error", "error", err)
-			}
-		}()
-	}
 
 	// Start HTTP server
 	go func() {
@@ -69,7 +42,9 @@ func main() {
 		}
 	}()
 
-	logger.Info("Coffee cups system started successfully")
+	logger.Info("Coffee cups system started successfully (HTTP only)")
+	logger.Info("HTTP server running on http://localhost:8080")
+	logger.Info("API endpoints available at http://localhost:8080/api/v1/")
 
 	// Wait for interrupt signal
 	quit := make(chan os.Signal, 1)
@@ -79,6 +54,5 @@ func main() {
 	logger.Info("Shutting down server...")
 
 	// Graceful shutdown
-	cancel()
 	httpServer.Stop()
 }

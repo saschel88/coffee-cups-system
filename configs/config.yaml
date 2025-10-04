@@ -1,0 +1,17 @@
+server:
+  host: "0.0.0.0"
+  port: 8080
+
+database:
+  host: "localhost"
+  port: 5432
+  user: "coffee_user"
+  password: "coffee_password"
+  dbname: "coffee_cups"
+  sslmode: "disable"
+
+telegram:
+  token: "${TELEGRAM_BOT_TOKEN}"
+  debug: false
+
+log_level: "info"

@@ -1,0 +1,218 @@
+name: Rules Enforcement
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  code-quality:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+        
+    - name: Install dependencies
+      run: go mod download
+      
+    - name: Run go vet
+      run: go vet ./...
+      
+    - name: Run go fmt check
+      run: |
+        if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
+          echo "Code is not formatted. Run 'go fmt ./...'"
+          exit 1
+        fi
+        
+    - name: Run golangci-lint
+      uses: golangci/golangci-lint-action@v3
+      with:
+        version: latest
+        
+    - name: Run go mod tidy check
+      run: |
+        go mod tidy
+        if [ -n "$(git diff --exit-code go.mod go.sum)" ]; then
+          echo "go.mod or go.sum needs to be updated"
+          exit 1
+        fi
+
+  test-coverage:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+        
+    - name: Install dependencies
+      run: go mod download
+      
+    - name: Run tests with coverage
+      run: go test -v -coverprofile=coverage.out ./...
+      
+    - name: Check coverage threshold
+      run: |
+        coverage=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
+        if (( $(echo "$coverage < 80" | bc -l) )); then
+          echo "Coverage $coverage% is below 80% threshold"
+          exit 1
+        fi
+        echo "Coverage: $coverage%"
+        
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.out
+
+  api-validation:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Validate OpenAPI spec
+      uses: swagger-api/swagger-codegen@v2
+      with:
+        command: validate
+        input: api/swagger.yaml
+        
+    - name: Check API consistency
+      run: |
+        # Check if all endpoints are documented
+        if ! grep -q "operationId" api/swagger.yaml; then
+          echo "Missing operationId in API spec"
+          exit 1
+        fi
+        
+        # Check if all schemas are defined
+        if ! grep -q "components:" api/swagger.yaml; then
+          echo "Missing components section in API spec"
+          exit 1
+        fi
+
+  security-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Run Gosec Security Scanner
+      uses: securecodewarrior/github-action-gosec@master
+      with:
+        args: '-fmt sarif -out gosec.sarif ./...'
+        
+    - name: Upload SARIF file
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: gosec.sarif
+
+  docker-security:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Build Docker image
+      run: docker build -t coffee-cups-system .
+      
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'coffee-cups-system'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  performance-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+        
+    - name: Install dependencies
+      run: go mod download
+      
+    - name: Run performance tests
+      run: |
+        # Start the application
+        go run ./cmd/server-no-bot &
+        APP_PID=$!
+        
+        # Wait for app to start
+        sleep 5
+        
+        # Run performance tests
+        go test -v -tags=performance ./tests/...
+        
+        # Cleanup
+        kill $APP_PID
+
+  documentation-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Check README exists
+      run: |
+        if [ ! -f "README.md" ]; then
+          echo "README.md is missing"
+          exit 1
+        fi
+        
+    - name: Check API documentation
+      run: |
+        if [ ! -f "api/swagger.yaml" ]; then
+          echo "API documentation is missing"
+          exit 1
+        fi
+        
+    - name: Validate markdown
+      uses: DavidAnson/markdownlint-cli2-action@v15
+      with:
+        globs: '**/*.md'
+
+  commit-message-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: Check commit messages
+      run: |
+        # Check if commit message follows conventional format
+        if ! echo "${{ github.event.head_commit.message }}" | grep -qE "^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?: .+"; then
+          echo "Commit message does not follow conventional format"
+          echo "Expected format: type(scope): description"
+          exit 1
+        fi

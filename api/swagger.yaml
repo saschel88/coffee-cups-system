@@ -1,0 +1,789 @@
+openapi: 3.0.3
+info:
+  title: Coffee Cups System API
+  description: |
+    A comprehensive API for tracking coffee capsule consumption and fair cost distribution among colleagues.
+    
+    ## Features
+    - User management and authentication
+    - Coffee box tracking
+    - Consumption logging
+    - Payment calculation and tracking
+    - Usage analytics
+    
+    ## Authentication
+    Currently, the API does not require authentication. In a production environment, you should implement proper authentication.
+  version: 1.0.0
+  contact:
+    name: Coffee Cups System Support
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8080
+    description: Development server
+  - url: https://api.coffeecups.com
+    description: Production server
+
+paths:
+  /health:
+    get:
+      summary: Health Check
+      description: Check if the service is running
+      operationId: healthCheck
+      tags:
+        - System
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "OK"
+
+  /api/v1/users:
+    get:
+      summary: Get All Users
+      description: Retrieve all active users in the system
+      operationId: getUsers
+      tags:
+        - Users
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      summary: Create User
+      description: Create a new user in the system
+      operationId: createUser
+      tags:
+        - Users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/users/{id}:
+    get:
+      summary: Get User by ID
+      description: Retrieve a specific user by their Telegram ID
+      operationId: getUserById
+      tags:
+        - Users
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Telegram ID of the user
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: User found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/boxes:
+    get:
+      summary: Get All Boxes
+      description: Retrieve all active coffee boxes
+      operationId: getBoxes
+      tags:
+        - Boxes
+      responses:
+        '200':
+          description: List of coffee boxes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Box'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      summary: Create Box
+      description: Create a new coffee box
+      operationId: createBox
+      tags:
+        - Boxes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBoxRequest'
+      responses:
+        '201':
+          description: Box created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Box'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/boxes/{id}:
+    get:
+      summary: Get Box by ID
+      description: Retrieve a specific coffee box by ID
+      operationId: getBoxById
+      tags:
+        - Boxes
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Box ID
+          schema:
+            type: integer
+            format: uint32
+      responses:
+        '200':
+          description: Box found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Box'
+        '404':
+          description: Box not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Update Box
+      description: Update an existing coffee box
+      operationId: updateBox
+      tags:
+        - Boxes
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Box ID
+          schema:
+            type: integer
+            format: uint32
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBoxRequest'
+      responses:
+        '200':
+          description: Box updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Box'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Box not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Delete Box
+      description: Deactivate a coffee box
+      operationId: deleteBox
+      tags:
+        - Boxes
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Box ID
+          schema:
+            type: integer
+            format: uint32
+      responses:
+        '204':
+          description: Box deactivated successfully
+        '404':
+          description: Box not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/coffee-logs:
+    get:
+      summary: Get Coffee Logs
+      description: Retrieve coffee consumption logs for a user
+      operationId: getCoffeeLogs
+      tags:
+        - Coffee Logs
+      parameters:
+        - name: user_id
+          in: query
+          required: true
+          description: User ID to get logs for
+          schema:
+            type: integer
+            format: uint32
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of logs to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+      responses:
+        '200':
+          description: List of coffee logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CoffeeLog'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      summary: Log Coffee
+      description: Log a coffee consumption
+      operationId: logCoffee
+      tags:
+        - Coffee Logs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogCoffeeRequest'
+      responses:
+        '201':
+          description: Coffee logged successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CoffeeLog'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/payments:
+    get:
+      summary: Get Payments
+      description: Retrieve payment information for users or boxes
+      operationId: getPayments
+      tags:
+        - Payments
+      parameters:
+        - name: user_id
+          in: query
+          required: false
+          description: User ID to get payments for
+          schema:
+            type: integer
+            format: uint32
+        - name: box_id
+          in: query
+          required: false
+          description: Box ID to get payments for
+          schema:
+            type: integer
+            format: uint32
+      responses:
+        '200':
+          description: List of payments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Payment'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/payments/{id}/pay:
+    post:
+      summary: Mark Payment as Paid
+      description: Mark a payment as paid
+      operationId: markPaymentAsPaid
+      tags:
+        - Payments
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Payment ID
+          schema:
+            type: integer
+            format: uint32
+      responses:
+        '200':
+          description: Payment marked as paid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+        '404':
+          description: Payment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/analytics/usage:
+    get:
+      summary: Get Usage Analytics
+      description: Get usage analytics for the system
+      operationId: getUsageAnalytics
+      tags:
+        - Analytics
+      parameters:
+        - name: period
+          in: query
+          required: false
+          description: Time period for analytics
+          schema:
+            type: string
+            enum: [day, week, month, year]
+            default: month
+      responses:
+        '200':
+          description: Usage analytics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsageAnalytics'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    User:
+      type: object
+      required:
+        - id
+        - telegram_id
+        - first_name
+        - is_active
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: integer
+          format: uint32
+          description: Internal user ID
+        telegram_id:
+          type: integer
+          format: int64
+          description: Telegram user ID
+        username:
+          type: string
+          description: Telegram username
+        first_name:
+          type: string
+          description: User's first name
+        last_name:
+          type: string
+          description: User's last name
+        is_active:
+          type: boolean
+          description: Whether the user is active
+        created_at:
+          type: string
+          format: date-time
+          description: User creation timestamp
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp
+
+    CreateUserRequest:
+      type: object
+      required:
+        - telegram_id
+        - first_name
+      properties:
+        telegram_id:
+          type: integer
+          format: int64
+          description: Telegram user ID
+        username:
+          type: string
+          description: Telegram username
+        first_name:
+          type: string
+          description: User's first name
+        last_name:
+          type: string
+          description: User's last name
+
+    Box:
+      type: object
+      required:
+        - id
+        - name
+        - total_cups
+        - price
+        - is_active
+        - created_by
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: integer
+          format: uint32
+          description: Box ID
+        name:
+          type: string
+          description: Box name
+        total_cups:
+          type: integer
+          minimum: 1
+          description: Total number of cups in the box
+        price:
+          type: number
+          format: float
+          minimum: 0
+          description: Total price of the box
+        is_active:
+          type: boolean
+          description: Whether the box is active
+        created_by:
+          type: integer
+          format: uint32
+          description: ID of the user who created the box
+        created_at:
+          type: string
+          format: date-time
+          description: Box creation timestamp
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp
+
+    CreateBoxRequest:
+      type: object
+      required:
+        - name
+        - total_cups
+        - price
+        - created_by
+      properties:
+        name:
+          type: string
+          description: Box name
+        total_cups:
+          type: integer
+          minimum: 1
+          description: Total number of cups in the box
+        price:
+          type: number
+          format: float
+          minimum: 0
+          description: Total price of the box
+        created_by:
+          type: integer
+          format: uint32
+          description: ID of the user creating the box
+
+    UpdateBoxRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Box name
+        total_cups:
+          type: integer
+          minimum: 1
+          description: Total number of cups in the box
+        price:
+          type: number
+          format: float
+          minimum: 0
+          description: Total price of the box
+
+    CoffeeLog:
+      type: object
+      required:
+        - id
+        - user_id
+        - box_id
+        - logged_at
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: integer
+          format: uint32
+          description: Log ID
+        user_id:
+          type: integer
+          format: uint32
+          description: User ID who logged the coffee
+        box_id:
+          type: integer
+          format: uint32
+          description: Box ID from which coffee was taken
+        logged_at:
+          type: string
+          format: date-time
+          description: When the coffee was logged
+        created_at:
+          type: string
+          format: date-time
+          description: Log creation timestamp
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp
+
+    LogCoffeeRequest:
+      type: object
+      required:
+        - user_id
+        - box_id
+      properties:
+        user_id:
+          type: integer
+          format: uint32
+          description: User ID logging the coffee
+        box_id:
+          type: integer
+          format: uint32
+          description: Box ID from which coffee is taken
+
+    Payment:
+      type: object
+      required:
+        - id
+        - user_id
+        - box_id
+        - amount
+        - is_paid
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: integer
+          format: uint32
+          description: Payment ID
+        user_id:
+          type: integer
+          format: uint32
+          description: User ID who owes the payment
+        box_id:
+          type: integer
+          format: uint32
+          description: Box ID for which payment is due
+        amount:
+          type: number
+          format: float
+          minimum: 0
+          description: Payment amount
+        is_paid:
+          type: boolean
+          description: Whether the payment has been made
+        paid_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the payment was made
+        created_at:
+          type: string
+          format: date-time
+          description: Payment creation timestamp
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp
+
+    UsageAnalytics:
+      type: object
+      properties:
+        total_users:
+          type: integer
+          description: Total number of users
+        total_boxes:
+          type: integer
+          description: Total number of boxes
+        total_coffee_logs:
+          type: integer
+          description: Total number of coffee logs
+        total_payments:
+          type: integer
+          description: Total number of payments
+        average_coffee_per_user:
+          type: number
+          format: float
+          description: Average coffee consumption per user
+        total_revenue:
+          type: number
+          format: float
+          description: Total revenue from coffee sales
+
+    Error:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error code
+        message:
+          type: string
+          description: Error message
+        details:
+          type: string
+          description: Additional error details
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token for authentication
+
+tags:
+  - name: System
+    description: System health and status
+  - name: Users
+    description: User management
+  - name: Boxes
+    description: Coffee box management
+  - name: Coffee Logs
+    description: Coffee consumption tracking
+  - name: Payments
+    description: Payment management
+  - name: Analytics
+    description: Usage analytics and reporting

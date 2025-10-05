@@ -18,7 +18,7 @@ services:
       - ./configs:/root/configs
 
   postgres:
-    image: postgres:15-alpine
+    image: postgres:17-alpine
     environment:
       - POSTGRES_USER=coffee_user
       - POSTGRES_PASSWORD=coffee_password
